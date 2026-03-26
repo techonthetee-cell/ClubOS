@@ -56,12 +56,14 @@ Plans:
 6. AI churn prediction scores visible on member profiles (rule-based for MVP, ML when data accumulates)
 7. Member dashboard (self-service view: statement, profile, bookings)
 
-**Plans:**
-- Plan 2.1: Tee sheet grid UI + Odoo booking CRUD
-- Plan 2.2: Booking rules engine + rate management
-- Plan 2.3: Member profiles + directory + billing
-- Plan 2.4: AI layer — dynamic pricing + churn prediction + member insights
-- Plan 2.5: Real-time updates (SSE) + member self-service dashboard
+**Plans:** 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Tee sheet grid UI + booking CRUD (types, interactive grid, booking modal)
+- [ ] 02-02-PLAN.md — Member profiles + directory + activity timeline
+- [ ] 02-03-PLAN.md — Booking rules engine + rate management + check-in + waitlist
+- [ ] 02-04-PLAN.md — AI layer: dynamic pricing + churn prediction + member insights + billing
+- [ ] 02-05-PLAN.md — Real-time SSE updates + member self-service dashboard
 
 ---
 
@@ -131,4 +133,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after phase 1 planning (revised: split plan 02, added plan 04)*
+*Last updated: 2026-03-26 after phase 2 planning (5 plans across 3 waves)*
