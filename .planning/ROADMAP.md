@@ -31,10 +31,12 @@
 
 **Critical risk:** Odoo integration complexity. GO/NO-GO decision at end of Week 2. Fallback: Supabase + PostgreSQL direct.
 
-**Plans:**
-- Plan 1.1: Odoo Docker deployment + JSON-RPC client
-- Plan 1.2: Monorepo scaffold + auth + multi-tenancy
-- Plan 1.3: UI component library + design system
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Odoo Docker deployment + typed JSON-RPC client (GO/NO-GO gate)
+- [ ] 01-02-PLAN.md — Turborepo monorepo scaffold + Auth.js + multi-tenant subdomain routing
+- [ ] 01-03-PLAN.md — Shared UI component library (emerald design system)
 
 ---
 
@@ -128,4 +130,4 @@
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after initial creation*
+*Last updated: 2026-03-26 after phase 1 planning*
