@@ -1,0 +1,4 @@
+{
+  "installCommand": "cd ../.. && npm install -g pnpm && pnpm install",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@clubos/dashboard"
+}
