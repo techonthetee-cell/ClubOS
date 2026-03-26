@@ -34,7 +34,7 @@
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Odoo Docker deployment + typed JSON-RPC client (GO/NO-GO gate)
+- [x] 01-01-PLAN.md — Odoo Docker deployment + typed JSON-RPC client (GO/NO-GO gate)
 - [ ] 01-02-PLAN.md — Turborepo monorepo restructure (structural scaffold + packages/ai stub)
 - [ ] 01-03-PLAN.md — Auth.js with Odoo credentials + multi-tenant subdomain routing
 - [ ] 01-04-PLAN.md — Shared UI component library (emerald design system)

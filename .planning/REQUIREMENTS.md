@@ -7,9 +7,9 @@
 
 ### Foundation (FOUND)
 
-- [ ] **FOUND-01**: Odoo 18 Community deployed via Docker with PostgreSQL, accessible via JSON-RPC
+- [x] **FOUND-01**: Odoo 18 Community deployed via Docker with PostgreSQL, accessible via JSON-RPC
 - [ ] **FOUND-02**: Next.js monorepo scaffolded (apps/dashboard, apps/booking, packages/shared, packages/odoo-client, packages/ai)
-- [ ] **FOUND-03**: Typed Odoo client (odoo-client package) wrapping JSON-RPC with auth, CRUD, and error handling
+- [x] **FOUND-03**: Typed Odoo client (odoo-client package) wrapping JSON-RPC with auth, CRUD, and error handling
 - [ ] **FOUND-04**: Authentication system (club staff login for dashboard, member login for booking portal)
 - [ ] **FOUND-05**: Multi-tenancy via Odoo multi-database (one DB per club, subdomain routing)
 - [ ] **FOUND-06**: Shared UI component library (emerald design system from prototype)

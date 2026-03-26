@@ -11,12 +11,12 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
-| 1 — Foundation & Odoo | ○ Pending | 0/3 | 0% |
+| 1 — Foundation & Odoo | ● Active | 1/4 | 25% |
 | 2 — Tee Sheet & Members | ○ Pending | 0/5 | 0% |
 | 3 — POS | ○ Pending | 0/4 | 0% |
 | 4 — Booking Portal & Beta | ○ Pending | 0/4 | 0% |
 
-**Overall:** 0/16 plans complete (0%)
+**Overall:** 1/16 plans complete (6%)
 
 ## Timeline
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Blockers
 
-None yet.
+- **Docker Desktop not installed:** Required for Odoo Docker stack and integration tests. Infrastructure files ready, startup deferred.
 
 ## Decisions Log
 
@@ -41,5 +41,8 @@ None yet.
 | 2026-03-26 | 90-day aggressive timeline | Funded venture, need to prove concept fast |
 | 2026-03-26 | Odoo go/no-go at Week 2 | If Odoo integration proves too complex, fallback to Supabase |
 
+| 2026-03-26 | Adapted to @rlizana/odoo-rpc actual API (Odoo class, env() pattern) | Library API differs from plan assumptions, wrapper handles it |
+| 2026-03-26 | Used call_kw for searchRead with kwargs | Cleaner API surface, native limit/offset/order support |
+
 ---
-*Last updated: 2026-03-26 after project initialization*
+*Last updated: 2026-03-26 after completing 01-01-PLAN.md (Odoo Docker + JSON-RPC client)*
