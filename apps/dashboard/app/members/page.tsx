@@ -1,190 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { supabase } from "../../lib/supabase";
 
-/* -- Mock Data ---------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
-type RiskLevel = "low" | "medium" | "high";
-
-interface Member {
-  id: number;
-  name: string;
-  initials: string;
-  membership: string;
-  risk: RiskLevel;
-  memberSince: string;
-  nps: number;
-  lifetimeSpend: number;
-  annualSpend: number;
-  visitFreq: string;
-  recentActivity: { icon: string; text: string; time: string }[];
-  monthlyVisits: number[];
+interface DbMember {
+  id: string;
+  member_number: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  membership_type: string;
+  status: string;
+  join_date: string;
+  nps_score: number | null;
+  churn_risk: number | null;
+  lifetime_spend: number;
+  annual_spend: number;
+  visit_frequency: number;
+  notes: string | null;
 }
 
-const members: Member[] = [
-  {
-    id: 1,
-    name: "William Sterling",
-    initials: "WS",
-    membership: "Executive",
-    risk: "low",
-    memberSince: "2016",
-    nps: 92,
-    lifetimeSpend: 142800,
-    annualSpend: 18400,
-    visitFreq: "3.2/week",
-    recentActivity: [
-      { icon: "login", text: "Checked in — Main Clubhouse", time: "Today, 8:14 AM" },
-      { icon: "restaurant", text: "Dining — The Grill Room, $142", time: "Yesterday, 7:30 PM" },
-      { icon: "golf_course", text: "Tee Time — 18 holes, foursome", time: "Mar 23, 7:00 AM" },
-      { icon: "event", text: "RSVP — Wine Tasting Event", time: "Mar 21" },
-      { icon: "fitness_center", text: "Fitness Center check-in", time: "Mar 20, 6:45 AM" },
-    ],
-    monthlyVisits: [14, 12, 15, 10, 13, 16, 14, 11, 15, 13, 12, 14],
-  },
-  {
-    id: 2,
-    name: "Dr. Sarah Jenkins",
-    initials: "SJ",
-    membership: "Platinum",
-    risk: "low",
-    memberSince: "2018",
-    nps: 88,
-    lifetimeSpend: 98200,
-    annualSpend: 14600,
-    visitFreq: "2.8/week",
-    recentActivity: [
-      { icon: "restaurant", text: "Dining — The Terrace, $98", time: "Today, 12:30 PM" },
-      { icon: "golf_course", text: "Tee Time — 9 holes", time: "Yesterday, 3:00 PM" },
-      { icon: "spa", text: "Spa appointment", time: "Mar 22" },
-      { icon: "login", text: "Checked in — Pool Area", time: "Mar 21" },
-      { icon: "event", text: "RSVP — Ladies Luncheon", time: "Mar 20" },
-    ],
-    monthlyVisits: [11, 10, 12, 9, 11, 13, 12, 10, 11, 12, 11, 12],
-  },
-  {
-    id: 3,
-    name: "Michael Lane",
-    initials: "ML",
-    membership: "Gold",
-    risk: "high",
-    memberSince: "2019",
-    nps: 34,
-    lifetimeSpend: 52400,
-    annualSpend: 6200,
-    visitFreq: "0.4/week",
-    recentActivity: [
-      { icon: "login", text: "Checked in — Pro Shop", time: "Mar 8" },
-      { icon: "restaurant", text: "Dining — The Bar, $38", time: "Feb 28" },
-      { icon: "golf_course", text: "Tee Time — 18 holes", time: "Feb 14" },
-      { icon: "email", text: "Opened renewal reminder email", time: "Feb 10" },
-      { icon: "login", text: "Checked in — Fitness Center", time: "Jan 30" },
-    ],
-    monthlyVisits: [8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1],
-  },
-  {
-    id: 4,
-    name: "Patricia Howard",
-    initials: "PH",
-    membership: "Social",
-    risk: "medium",
-    memberSince: "2020",
-    nps: 62,
-    lifetimeSpend: 31600,
-    annualSpend: 8400,
-    visitFreq: "1.5/week",
-    recentActivity: [
-      { icon: "restaurant", text: "Dining — The Terrace, $76", time: "Today, 1:15 PM" },
-      { icon: "event", text: "Attended — Book Club meeting", time: "Mar 22" },
-      { icon: "login", text: "Checked in — Main Clubhouse", time: "Mar 20" },
-      { icon: "restaurant", text: "Dining — The Grill Room, $112", time: "Mar 18" },
-      { icon: "event", text: "RSVP — Halloween Gala", time: "Mar 16" },
-    ],
-    monthlyVisits: [6, 7, 5, 6, 8, 7, 5, 6, 7, 6, 5, 6],
-  },
-  {
-    id: 5,
-    name: "Robert Whitlock",
-    initials: "RW",
-    membership: "Gold",
-    risk: "low",
-    memberSince: "2017",
-    nps: 85,
-    lifetimeSpend: 118600,
-    annualSpend: 16200,
-    visitFreq: "2.5/week",
-    recentActivity: [
-      { icon: "golf_course", text: "Tee Time — 18 holes, twosome", time: "Today, 6:30 AM" },
-      { icon: "restaurant", text: "Dining — The Grill Room, $88", time: "Yesterday" },
-      { icon: "login", text: "Checked in — Pro Shop", time: "Mar 23" },
-      { icon: "fitness_center", text: "Fitness Center check-in", time: "Mar 22" },
-      { icon: "golf_course", text: "Tee Time — 9 holes", time: "Mar 21" },
-    ],
-    monthlyVisits: [10, 11, 10, 9, 10, 12, 11, 10, 11, 10, 10, 11],
-  },
-  {
-    id: 6,
-    name: "James Chen",
-    initials: "JC",
-    membership: "Executive",
-    risk: "low",
-    memberSince: "2015",
-    nps: 95,
-    lifetimeSpend: 210400,
-    annualSpend: 24800,
-    visitFreq: "4.1/week",
-    recentActivity: [
-      { icon: "golf_course", text: "Tee Time — 18 holes, foursome", time: "Today, 7:00 AM" },
-      { icon: "restaurant", text: "Dining — The Terrace, $220", time: "Today, 12:00 PM" },
-      { icon: "login", text: "Checked in — Main Clubhouse", time: "Yesterday" },
-      { icon: "event", text: "Hosted — Member-Guest Tournament", time: "Mar 22" },
-      { icon: "spa", text: "Spa appointment", time: "Mar 21" },
-    ],
-    monthlyVisits: [16, 15, 17, 14, 16, 18, 17, 15, 16, 17, 16, 18],
-  },
-  {
-    id: 7,
-    name: "Linda Morrison",
-    initials: "LM",
-    membership: "Platinum",
-    risk: "medium",
-    memberSince: "2019",
-    nps: 58,
-    lifetimeSpend: 68400,
-    annualSpend: 10200,
-    visitFreq: "1.8/week",
-    recentActivity: [
-      { icon: "restaurant", text: "Dining — The Bar, $54", time: "Mar 22" },
-      { icon: "login", text: "Checked in — Pool Area", time: "Mar 19" },
-      { icon: "event", text: "Cancelled — Ladies Luncheon RSVP", time: "Mar 17" },
-      { icon: "restaurant", text: "Dining — The Terrace, $66", time: "Mar 14" },
-      { icon: "login", text: "Checked in — Main Clubhouse", time: "Mar 10" },
-    ],
-    monthlyVisits: [8, 9, 7, 8, 7, 6, 7, 8, 7, 6, 7, 7],
-  },
-  {
-    id: 8,
-    name: "David Thompson",
-    initials: "DT",
-    membership: "Gold",
-    risk: "high",
-    memberSince: "2020",
-    nps: 28,
-    lifetimeSpend: 38200,
-    annualSpend: 4800,
-    visitFreq: "0.2/week",
-    recentActivity: [
-      { icon: "email", text: "Opened renewal reminder email", time: "Mar 15" },
-      { icon: "login", text: "Checked in — Pro Shop", time: "Feb 20" },
-      { icon: "golf_course", text: "Tee Time — 9 holes", time: "Feb 5" },
-      { icon: "restaurant", text: "Dining — The Grill Room, $64", time: "Jan 22" },
-      { icon: "login", text: "Checked in — Main Clubhouse", time: "Jan 10" },
-    ],
-    monthlyVisits: [6, 5, 4, 3, 3, 2, 2, 1, 1, 1, 0, 0],
-  },
-];
+interface Activity {
+  id: string;
+  activity_type: string;
+  description: string;
+  amount: number | null;
+  created_at: string;
+}
 
+type RiskLevel = "low" | "medium" | "high";
 type FilterType = "all" | "vip" | "at-risk" | "new";
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function getInitials(first: string, last: string): string {
+  return `${first[0] || ""}${last[0] || ""}`.toUpperCase();
+}
+
+function riskFromScore(score: number | null): RiskLevel {
+  if (!score || score <= 2) return "low";
+  if (score <= 3) return "medium";
+  return "high";
+}
+
+function fmt(n: number) {
+  return "$" + n.toLocaleString();
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function activityIcon(type: string): string {
+  const map: Record<string, string> = {
+    check_in: "login",
+    tee_time: "golf_course",
+    dining: "restaurant",
+    pro_shop: "shopping_bag",
+    event: "event",
+    spa: "spa",
+    fitness: "fitness_center",
+    payment: "payments",
+    communication: "mail",
+  };
+  return map[type] || "circle";
+}
 
 const riskColor: Record<RiskLevel, string> = {
   low: "bg-emerald-500",
@@ -204,30 +99,95 @@ const riskTextColor: Record<RiskLevel, string> = {
   high: "text-red-500",
 };
 
-/* -- Helpers ------------------------------------------------------ */
-
-function fmt(n: number) {
-  return "$" + n.toLocaleString();
-}
-
-/* -- Component ---------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 export default function MembersPage() {
-  const [selectedId, setSelectedId] = useState(1);
+  const [members, setMembers] = useState<DbMember[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const filtered = members.filter((m) => {
-    if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filter === "vip") return m.membership === "Executive" || m.membership === "Platinum";
-    if (filter === "at-risk") return m.risk === "high";
-    if (filter === "new") return parseInt(m.memberSince) >= 2020;
-    return true;
-  });
+  // Fetch members
+  useEffect(() => {
+    async function fetchMembers() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("members")
+        .select("*")
+        .eq("status", "active")
+        .order("last_name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching members:", error);
+      } else {
+        const m = (data as DbMember[]) || [];
+        setMembers(m);
+        if (m.length > 0 && !selectedId) {
+          setSelectedId(m[0].id);
+        }
+      }
+      setLoading(false);
+    }
+    fetchMembers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch activities for selected member
+  useEffect(() => {
+    if (!selectedId) return;
+    async function fetchActivities() {
+      const { data, error } = await supabase
+        .from("member_activity")
+        .select("*")
+        .eq("member_id", selectedId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Error fetching activities:", error);
+      } else {
+        setActivities((data as Activity[]) || []);
+      }
+    }
+    fetchActivities();
+  }, [selectedId]);
+
+  // Filter members
+  const filtered = useMemo(() => {
+    return members.filter((m) => {
+      const fullName = `${m.first_name} ${m.last_name}`.toLowerCase();
+      if (search && !fullName.includes(search.toLowerCase())) return false;
+      if (filter === "vip")
+        return m.membership_type === "executive" || m.membership_type === "platinum";
+      if (filter === "at-risk") return (m.churn_risk || 1) >= 4;
+      if (filter === "new") {
+        const joinYear = new Date(m.join_date).getFullYear();
+        return joinYear >= 2024;
+      }
+      return true;
+    });
+  }, [members, search, filter]);
 
   const selected = members.find((m) => m.id === selectedId) ?? members[0];
-  const maxVisit = Math.max(...selected.monthlyVisits);
+  const risk: RiskLevel = selected ? riskFromScore(selected.churn_risk) : "low";
+
+  // Generate synthetic monthly visits from visit_frequency
+  const monthlyVisits = useMemo(() => {
+    if (!selected) return Array(12).fill(0);
+    const base = selected.visit_frequency * 4.3; // weekly to monthly
+    return Array.from({ length: 12 }, (_, i) => {
+      // Add slight variance per month
+      const variance = Math.sin(i * 0.8) * 2 + (Math.random() - 0.5) * 2;
+      return Math.max(0, Math.round(base + variance));
+    });
+  }, [selected]);
+
+  const maxVisit = Math.max(...monthlyVisits, 1);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const filters: { key: FilterType; label: string }[] = [
@@ -237,7 +197,34 @@ export default function MembersPage() {
     { key: "new", label: "New" },
   ];
 
-  const tabs = ["Overview", "Activity", "Spending", "Feedback", "Communications"];
+  const tabs = ["Overview", "Activity", "Spending", "Feedback"];
+
+  // Churn risk summary counts
+  const riskCounts = useMemo(() => {
+    const high = members.filter((m) => (m.churn_risk || 1) >= 4).length;
+    const medium = members.filter((m) => (m.churn_risk || 1) === 3).length;
+    const low = members.filter((m) => (m.churn_risk || 1) <= 2).length;
+    return { high, medium, low };
+  }, [members]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)]">
+        <div className="text-sm text-slate-400">Loading members...</div>
+      </div>
+    );
+  }
+
+  if (!selected) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)]">
+        <div className="text-center">
+          <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">group</span>
+          <p className="text-sm text-slate-400">No members found</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-4 h-[calc(100vh-7rem)]">
@@ -274,28 +261,46 @@ export default function MembersPage() {
           ))}
         </div>
 
+        {/* Member count */}
+        <div className="px-3 py-2 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+          {filtered.length} member{filtered.length !== 1 ? "s" : ""}
+        </div>
+
         {/* Member Cards */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filtered.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setSelectedId(m.id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                selectedId === m.id
-                  ? "bg-white border-l-4 border-emerald-500 shadow-sm"
-                  : "hover:bg-slate-50 border-l-4 border-transparent"
-              }`}
-            >
-              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-emerald-500">{m.initials}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{m.name}</p>
-                <p className="text-xs text-slate-500">{m.membership}</p>
-              </div>
-              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${riskColor[m.risk]}`} title={riskLabel[m.risk]} />
-            </button>
-          ))}
+          {filtered.map((m) => {
+            const mRisk = riskFromScore(m.churn_risk);
+            return (
+              <button
+                key={m.id}
+                onClick={() => {
+                  setSelectedId(m.id);
+                  setActiveTab("overview");
+                }}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
+                  selectedId === m.id
+                    ? "bg-white border-l-4 border-emerald-500 shadow-sm"
+                    : "hover:bg-slate-50 border-l-4 border-transparent"
+                }`}
+              >
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-semibold text-emerald-500">
+                    {getInitials(m.first_name, m.last_name)}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">
+                    {m.first_name} {m.last_name}
+                  </p>
+                  <p className="text-xs text-slate-500 capitalize">{m.membership_type}</p>
+                </div>
+                <span
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${riskColor[mRisk]}`}
+                  title={riskLabel[mRisk]}
+                />
+              </button>
+            );
+          })}
           {filtered.length === 0 && (
             <p className="text-sm text-slate-400 text-center py-8">No members match filter</p>
           )}
@@ -308,25 +313,32 @@ export default function MembersPage() {
         <div className="p-5 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
-              <span className="text-lg font-bold text-emerald-500">{selected.initials}</span>
+              <span className="text-lg font-bold text-emerald-500">
+                {getInitials(selected.first_name, selected.last_name)}
+              </span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{selected.name}</h2>
+              <h2 className="text-xl font-bold text-slate-900">
+                {selected.first_name} {selected.last_name}
+              </h2>
               <div className="flex items-center gap-3 mt-1">
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    selected.membership === "Executive"
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
+                    selected.membership_type === "executive"
                       ? "bg-[#D4A843]/20 text-[#D4A843] border border-[#D4A843]/30"
-                      : selected.membership === "Platinum"
+                      : selected.membership_type === "platinum"
                       ? "bg-slate-200 text-slate-600 border border-slate-300"
-                      : selected.membership === "Gold"
+                      : selected.membership_type === "gold"
                       ? "bg-yellow-100 text-yellow-600 border border-yellow-300"
                       : "bg-emerald-50 text-emerald-500 border border-emerald-200"
                   }`}
                 >
-                  {selected.membership}
+                  {selected.membership_type}
                 </span>
-                <span className="text-xs text-slate-500">Member since {selected.memberSince}</span>
+                <span className="text-xs text-slate-500">
+                  Member since {new Date(selected.join_date).getFullYear()}
+                </span>
+                <span className="text-xs text-slate-400">#{selected.member_number}</span>
               </div>
             </div>
           </div>
@@ -334,14 +346,14 @@ export default function MembersPage() {
             <p className="text-xs text-slate-500 uppercase tracking-wider">NPS Score</p>
             <p
               className={`text-2xl font-bold ${
-                selected.nps >= 70
+                (selected.nps_score || 0) >= 70
                   ? "text-emerald-500"
-                  : selected.nps >= 50
+                  : (selected.nps_score || 0) >= 50
                   ? "text-yellow-500"
                   : "text-red-500"
               }`}
             >
-              {selected.nps}
+              {selected.nps_score ?? "--"}
             </p>
           </div>
         </div>
@@ -373,14 +385,26 @@ export default function MembersPage() {
               {/* Stats Row */}
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: "Lifetime Spend", value: fmt(selected.lifetimeSpend), icon: "account_balance_wallet" },
-                  { label: "Annual Spend", value: fmt(selected.annualSpend), icon: "trending_up" },
-                  { label: "Visit Frequency", value: selected.visitFreq, icon: "directions_walk" },
                   {
-                    label: "Churn Risk",
-                    value: riskLabel[selected.risk],
+                    label: "Lifetime Spend",
+                    value: fmt(Number(selected.lifetime_spend)),
+                    icon: "account_balance_wallet",
+                  },
+                  {
+                    label: "Annual Spend",
+                    value: fmt(Number(selected.annual_spend)),
+                    icon: "trending_up",
+                  },
+                  {
+                    label: "Visits/Week",
+                    value: `${Number(selected.visit_frequency).toFixed(1)}`,
+                    icon: "directions_walk",
+                  },
+                  {
+                    label: "Risk Level",
+                    value: riskLabel[risk],
                     icon: "shield",
-                    color: riskTextColor[selected.risk],
+                    color: riskTextColor[risk],
                   },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
@@ -397,10 +421,10 @@ export default function MembersPage() {
               <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                 <h3 className="text-sm font-semibold text-slate-700 mb-4">Visit Trend (12 Months)</h3>
                 <div className="flex items-end gap-2 h-32">
-                  {selected.monthlyVisits.map((v, i) => (
+                  {monthlyVisits.map((v, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
                       <div
-                        className="w-full bg-emerald-500/80 rounded-t"
+                        className="w-full bg-emerald-500/80 rounded-t transition-all"
                         style={{ height: `${maxVisit > 0 ? (v / maxVisit) * 100 : 0}%` }}
                       />
                       <span className="text-[10px] text-slate-400">{months[i]}</span>
@@ -412,29 +436,72 @@ export default function MembersPage() {
               {/* Recent Activity */}
               <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h3>
-                <div className="space-y-3">
-                  {selected.recentActivity.map((a, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-emerald-500/60 text-lg">{a.icon}</span>
-                      <span className="text-sm text-slate-700 flex-1">{a.text}</span>
-                      <span className="text-xs text-slate-400 whitespace-nowrap">{a.time}</span>
-                    </div>
-                  ))}
-                </div>
+                {activities.length > 0 ? (
+                  <div className="space-y-3">
+                    {activities.slice(0, 5).map((a) => (
+                      <div key={a.id} className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-emerald-500/60 text-lg">
+                          {activityIcon(a.activity_type)}
+                        </span>
+                        <span className="text-sm text-slate-700 flex-1">{a.description}</span>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">
+                          {timeAgo(a.created_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No recent activity</p>
+                )}
               </div>
+
+              {/* Contact Info */}
+              {(selected.email || selected.phone) && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Contact</h3>
+                  <div className="space-y-2">
+                    {selected.email && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="material-symbols-outlined text-slate-400 text-lg">mail</span>
+                        {selected.email}
+                      </div>
+                    )}
+                    {selected.phone && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="material-symbols-outlined text-slate-400 text-lg">phone</span>
+                        {selected.phone}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "activity" && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-700 mb-2">Full Activity Log</h3>
-              {selected.recentActivity.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
-                  <span className="material-symbols-outlined text-emerald-500/60 text-lg">{a.icon}</span>
-                  <span className="text-sm text-slate-700 flex-1">{a.text}</span>
-                  <span className="text-xs text-slate-400 whitespace-nowrap">{a.time}</span>
-                </div>
-              ))}
+              {activities.length > 0 ? (
+                activities.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-200 shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-emerald-500/60 text-lg">
+                      {activityIcon(a.activity_type)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-slate-700">{a.description}</span>
+                      {a.amount && (
+                        <span className="ml-2 text-xs font-medium text-emerald-600">{fmt(Number(a.amount))}</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-400 whitespace-nowrap">{timeAgo(a.created_at)}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-8">No activity recorded</p>
+              )}
             </div>
           )}
 
@@ -443,15 +510,15 @@ export default function MembersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lifetime Spend</p>
-                  <p className="text-2xl font-bold text-slate-900">{fmt(selected.lifetimeSpend)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{fmt(Number(selected.lifetime_spend))}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Annual Spend</p>
-                  <p className="text-2xl font-bold text-slate-900">{fmt(selected.annualSpend)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{fmt(Number(selected.annual_spend))}</p>
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Spending by Category</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Estimated by Category</p>
                 {[
                   { cat: "Dining", pct: 42 },
                   { cat: "Golf / Tee Times", pct: 28 },
@@ -475,120 +542,128 @@ export default function MembersPage() {
             <div className="space-y-4">
               <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">NPS Score</p>
-                <p className={`text-3xl font-bold ${selected.nps >= 70 ? "text-emerald-500" : selected.nps >= 50 ? "text-yellow-500" : "text-red-500"}`}>
-                  {selected.nps}
+                <p
+                  className={`text-3xl font-bold ${
+                    (selected.nps_score || 0) >= 70
+                      ? "text-emerald-500"
+                      : (selected.nps_score || 0) >= 50
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                  }`}
+                >
+                  {selected.nps_score ?? "--"}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {(selected.nps_score || 0) >= 70
+                    ? "Promoter"
+                    : (selected.nps_score || 0) >= 50
+                    ? "Passive"
+                    : "Detractor"}
                 </p>
               </div>
               <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent Feedback</h3>
-                <p className="text-sm text-slate-500 italic">&ldquo;Great experience at the wine tasting last week. Staff was attentive and the selections were excellent.&rdquo;</p>
-                <p className="text-xs text-slate-400 mt-2">-- Survey response, Mar 15</p>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Member Notes</h3>
+                <p className="text-sm text-slate-500">
+                  {selected.notes || "No notes recorded for this member."}
+                </p>
               </div>
-            </div>
-          )}
-
-          {activeTab === "communications" && (
-            <div className="space-y-3">
-              {[
-                { type: "Email", subject: "Renewal Reminder", date: "Mar 10", status: "Opened" },
-                { type: "Email", subject: "February Newsletter", date: "Feb 28", status: "Opened" },
-                { type: "SMS", subject: "Tee Time Confirmation", date: "Feb 14", status: "Delivered" },
-                { type: "Email", subject: "Holiday Event Invitation", date: "Dec 15", status: "Clicked" },
-              ].map((c, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
-                  <span className="material-symbols-outlined text-emerald-500/60 text-lg">
-                    {c.type === "Email" ? "mail" : "sms"}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700">{c.subject}</p>
-                    <p className="text-xs text-slate-400">{c.type}</p>
-                  </div>
-                  <span className="text-xs text-emerald-500">{c.status}</span>
-                  <span className="text-xs text-slate-400">{c.date}</span>
-                </div>
-              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* -- Right Panel: AI Recommendations ------------------------ */}
+      {/* -- Right Panel: AI Intelligence ----------------------------- */}
       <div className="w-80 shrink-0 bg-[#F8FAFC] rounded-xl border border-gray-200 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-2">
-          <span className="material-symbols-outlined text-emerald-500 text-xl">auto_awesome</span>
-          <h3 className="text-sm font-semibold text-slate-800">AI Member Intelligence</h3>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-500 text-xl">auto_awesome</span>
+            <h3 className="text-sm font-semibold text-slate-800">AI Intelligence</h3>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-dot" />
+            <span className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">Live</span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Dynamic recommendation based on selected member */}
-          {selected.risk === "high" && (
-            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+          {risk === "high" && (
+            <div className="bg-white rounded-lg p-4 border-l-4 border-l-red-500 border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-red-500 text-lg">warning</span>
-                <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">At-Risk Alert</p>
+                <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Churn Warning</p>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed">
-                {selected.name}&apos;s visits dropped 40% in 60 days. <strong className="text-slate-900">Recommend:</strong> personal call from GM + complimentary dinner invite.
+                {selected.first_name}&apos;s visit frequency is{" "}
+                <strong className="text-slate-900">{Number(selected.visit_frequency).toFixed(1)}/week</strong>
+                {Number(selected.visit_frequency) < 1 && " -- well below healthy range"}.
+                Recommend personal outreach from GM + complimentary round.
               </p>
             </div>
           )}
 
-          {selected.risk === "low" && selected.annualSpend > 15000 && (
-            <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+          {risk === "low" && Number(selected.annual_spend) > 15000 && (
+            <div className="bg-white rounded-lg p-4 border-l-4 border-l-emerald-500 border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-emerald-500 text-lg">trending_up</span>
-                <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Growth Opportunity</p>
+                <span className="material-symbols-outlined text-emerald-500 text-lg">diamond</span>
+                <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Value Profile</p>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed">
-                Spending trend up 15% QoQ. Consider <strong className="text-slate-900">Platinum tier upgrade</strong> invitation.
+                High-value member spending{" "}
+                <strong className="text-slate-900">{fmt(Number(selected.annual_spend))}/yr</strong>.
+                Consider tier upgrade invitation or VIP perks package.
               </p>
             </div>
           )}
 
-          {selected.risk === "medium" && (
-            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+          {risk === "medium" && (
+            <div className="bg-white rounded-lg p-4 border-l-4 border-l-yellow-500 border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-yellow-500 text-lg">visibility</span>
-                <p className="text-xs font-semibold text-yellow-500 uppercase tracking-wider">Watch List</p>
+                <p className="text-xs font-semibold text-yellow-500 uppercase tracking-wider">Engagement Gap</p>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed">
-                Visit frequency declining. <strong className="text-slate-900">Recommend:</strong> targeted event invitation based on past preferences.
+                Visit frequency declining. Recommend targeted event invitation based on past activity patterns.
               </p>
             </div>
           )}
 
-          {/* General insights -- always shown */}
-          <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+          {/* Always-shown insights */}
+          <div className="bg-white rounded-lg p-4 border-l-4 border-l-emerald-500 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined text-emerald-500 text-lg">campaign</span>
               <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Re-engagement</p>
             </div>
             <p className="text-sm text-slate-700 leading-relaxed">
-              <strong className="text-slate-900">23 members</strong> haven&apos;t visited in 30+ days. Automated re-engagement campaign recommended.
+              <strong className="text-slate-900">{riskCounts.high + riskCounts.medium} members</strong> need
+              attention. Automated re-engagement campaign recommended.
             </p>
             <button className="mt-3 text-xs font-medium text-emerald-500 hover:text-emerald-600 transition-colors">
               Launch Campaign &rarr;
             </button>
           </div>
 
-          <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+          <div className="bg-white rounded-lg p-4 border-l-4 border-l-emerald-500 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined text-emerald-500 text-lg">auto_awesome</span>
               <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Predictive Insight</p>
             </div>
             <p className="text-sm text-slate-700 leading-relaxed">
-              Members who attend <strong className="text-slate-900">wine events</strong> have 34% higher retention. Next wine tasting has 8 open seats.
+              Members who attend <strong className="text-slate-900">wine events</strong> have 34% higher retention.
+              Next wine tasting has 8 open seats.
             </p>
           </div>
 
           {/* Churn Risk Summary */}
           <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Churn Risk Summary</h4>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Global Churn Overview
+            </h4>
             <div className="space-y-2">
               {[
-                { label: "High Risk", count: 12, color: "bg-red-500", textColor: "text-red-500" },
-                { label: "Medium", count: 28, color: "bg-yellow-500", textColor: "text-yellow-500" },
-                { label: "Low", count: 1208, color: "bg-emerald-500", textColor: "text-emerald-500" },
+                { label: "High Risk", count: riskCounts.high, color: "bg-red-500", textColor: "text-red-500" },
+                { label: "Medium", count: riskCounts.medium, color: "bg-yellow-500", textColor: "text-yellow-500" },
+                { label: "Low", count: riskCounts.low, color: "bg-emerald-500", textColor: "text-emerald-500" },
               ].map((r) => (
                 <div key={r.label} className="flex items-center gap-3">
                   <span className={`w-2 h-2 rounded-full ${r.color}`} />
@@ -598,11 +673,24 @@ export default function MembersPage() {
               ))}
             </div>
             <div className="mt-3 flex gap-1 h-2 rounded-full overflow-hidden">
-              <div className="bg-red-500" style={{ width: "1%" }} />
-              <div className="bg-yellow-500" style={{ width: "2.2%" }} />
-              <div className="bg-emerald-500 flex-1" />
+              {(() => {
+                const total = members.length || 1;
+                return (
+                  <>
+                    <div className="bg-red-500" style={{ width: `${(riskCounts.high / total) * 100}%` }} />
+                    <div className="bg-yellow-500" style={{ width: `${(riskCounts.medium / total) * 100}%` }} />
+                    <div className="bg-emerald-500 flex-1" />
+                  </>
+                );
+              })()}
             </div>
           </div>
+
+          {/* Generate Outreach Plan */}
+          <button className="w-full py-3 rounded-lg bg-emerald-500 text-sm font-medium text-white hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-lg">auto_awesome</span>
+            Generate Outreach Plan
+          </button>
         </div>
       </div>
     </div>

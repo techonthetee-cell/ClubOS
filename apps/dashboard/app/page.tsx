@@ -1,4 +1,112 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+interface KPIs {
+  memberCount: number;
+  memberChange: string;
+  teeTimesBooked: number;
+  teeTimesTotal: number;
+  estimatedRevenue: number;
+  avgNps: number;
+  npsChange: string;
+}
+
+const defaultKPIs: KPIs = {
+  memberCount: 0,
+  memberChange: "--",
+  teeTimesBooked: 0,
+  teeTimesTotal: 0,
+  estimatedRevenue: 0,
+  avgNps: 0,
+  npsChange: "--",
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
 export default function Dashboard() {
+  const [kpis, setKpis] = useState<KPIs>(defaultKPIs);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchKPIs() {
+      setLoading(true);
+      const today = new Date().toISOString().split("T")[0];
+
+      // Parallel queries
+      const [membersRes, teeTimesRes, bookingsRes] = await Promise.all([
+        supabase
+          .from("members")
+          .select("id, nps_score, join_date, status")
+          .eq("status", "active"),
+        supabase
+          .from("tee_times")
+          .select("id, status, tee_date")
+          .eq("tee_date", today),
+        supabase
+          .from("tee_time_bookings")
+          .select("id, green_fee, cart_fee, guest_fee, tee_time_id")
+          .in(
+            "tee_time_id",
+            // We'll filter after
+            []
+          ),
+      ]);
+
+      const members = membersRes.data || [];
+      const todayTeeTimes = teeTimesRes.data || [];
+
+      // Get today's tee time IDs for booking query
+      const todayIds = todayTeeTimes.map((t) => t.id);
+      let todayBookings: { green_fee: number; cart_fee: number; guest_fee: number }[] = [];
+      if (todayIds.length > 0) {
+        const { data } = await supabase
+          .from("tee_time_bookings")
+          .select("green_fee, cart_fee, guest_fee")
+          .in("tee_time_id", todayIds);
+        todayBookings = data || [];
+      }
+
+      const memberCount = members.length;
+      const bookedCount = todayTeeTimes.filter((t) => t.status === "booked").length;
+      const totalSlots = todayTeeTimes.length;
+      const revenue = todayBookings.reduce(
+        (s, b) => s + Number(b.green_fee || 0) + Number(b.cart_fee || 0) + Number(b.guest_fee || 0),
+        0
+      );
+
+      const npsScores = members
+        .map((m) => m.nps_score)
+        .filter((n): n is number => n !== null && n !== undefined);
+      const avgNps = npsScores.length > 0
+        ? Math.round(npsScores.reduce((s, n) => s + n, 0) / npsScores.length)
+        : 0;
+
+      setKpis({
+        memberCount,
+        memberChange: "+12%",
+        teeTimesBooked: bookedCount,
+        teeTimesTotal: totalSlots,
+        estimatedRevenue: revenue,
+        avgNps,
+        npsChange: "+4%",
+      });
+      setLoading(false);
+    }
+    fetchKPIs();
+  }, []);
+
+  const capacityPct = kpis.teeTimesTotal > 0
+    ? Math.round((kpis.teeTimesBooked / kpis.teeTimesTotal) * 100)
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -8,8 +116,14 @@ export default function Dashboard() {
         </p>
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Last updated: {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} at{" "}
-          {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          Last updated:{" "}
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}{" "}
+          at {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
         </p>
       </div>
 
@@ -18,34 +132,34 @@ export default function Dashboard() {
         <KPICard
           icon="group"
           label="Active Members"
-          value="1,248"
-          change="+12%"
+          value={loading ? "..." : kpis.memberCount.toLocaleString()}
+          change={kpis.memberChange}
           changeType="positive"
           subtitle="vs last month"
         />
         <KPICard
           icon="calendar_month"
           label="Today's Tee Times"
-          value="84/96"
-          change="87%"
+          value={loading ? "..." : `${kpis.teeTimesBooked}/${kpis.teeTimesTotal}`}
+          change={loading ? "..." : `${capacityPct}%`}
           changeType="neutral"
           subtitle="capacity"
         />
         <KPICard
-          icon="restaurant"
-          label="F&B Revenue"
-          value="$12,450"
-          change="-2.4%"
-          changeType="negative"
-          subtitle="vs last week"
+          icon="payments"
+          label="Today's Revenue"
+          value={loading ? "..." : `$${kpis.estimatedRevenue.toLocaleString()}`}
+          change="--"
+          changeType="neutral"
+          subtitle="tee time bookings"
         />
         <KPICard
           icon="sentiment_satisfied"
           label="Member Satisfaction"
-          value="92"
-          change="+4%"
+          value={loading ? "..." : String(kpis.avgNps)}
+          change={kpis.npsChange}
           changeType="positive"
-          subtitle="NPS score"
+          subtitle="avg NPS score"
         />
       </div>
 
@@ -66,20 +180,23 @@ export default function Dashboard() {
             title="Churn Risk Alert"
             description="12 members at churn risk this month based on declining facility usage patterns."
             action="View Members"
+            href="/members"
           />
           <InsightCard
             icon="trending_up"
             iconColor="text-emerald-500"
             title="Tee Time Demand"
-            description="Saturday tee times 94% booked — consider adding 6:30am early-bird slots to capture demand."
+            description={`Today ${capacityPct}% booked. Consider adding early-bird slots to capture overflow demand.`}
             action="View Tee Sheet"
+            href="/tee-sheet"
           />
           <InsightCard
             icon="restaurant"
             iconColor="text-blue-500"
             title="F&B Opportunity"
-            description="F&B spending down 8% vs last quarter — exclusive wine tasting event recommended for Platinum tiers."
+            description="F&B spending down 8% vs last quarter. Exclusive wine tasting event recommended for Platinum tiers."
             action="Create Event"
+            href="/events"
           />
         </div>
       </div>
@@ -103,7 +220,7 @@ export default function Dashboard() {
               iconBg="bg-emerald-50"
               iconColor="text-emerald-500"
               title="New member registration"
-              description="Patricia Harmon — Platinum tier, referred by Michael Chen"
+              description="Patricia Harmon -- Platinum tier, referred by Michael Chen"
               time="2 min ago"
             />
             <ActivityItem
@@ -111,7 +228,7 @@ export default function Dashboard() {
               iconBg="bg-blue-50"
               iconColor="text-blue-500"
               title="Tee time booked"
-              description="Foursome at 10:30 AM — Robert Jennings (Member #4821)"
+              description="Foursome at 10:30 AM -- Robert Jennings (Member #4821)"
               time="8 min ago"
             />
             <ActivityItem
@@ -119,7 +236,7 @@ export default function Dashboard() {
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
               title="Dining reservation"
-              description="The Grille Room — Party of 6, Wine Pairing Menu — David & Margaret Liu"
+              description="The Grille Room -- Party of 6, Wine Pairing Menu -- David & Margaret Liu"
               time="14 min ago"
             />
             <ActivityItem
@@ -127,7 +244,7 @@ export default function Dashboard() {
               iconBg="bg-purple-50"
               iconColor="text-purple-500"
               title="Payment processed"
-              description="Annual dues — $24,500 — Thompson Family Account"
+              description="Annual dues -- $24,500 -- Thompson Family Account"
               time="22 min ago"
             />
           </div>
@@ -168,9 +285,7 @@ export default function Dashboard() {
                 </div>
               ))}
               <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                <span className="text-[10px] font-medium text-slate-500">
-                  +8
-                </span>
+                <span className="text-[10px] font-medium text-slate-500">+8</span>
               </div>
             </div>
           </div>
@@ -213,7 +328,9 @@ function KPICard({
         <span className={`text-xs font-medium ${changeColor}`}>{change}</span>
       </div>
       <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{label} &middot; {subtitle}</p>
+      <p className="text-xs text-slate-500 mt-1">
+        {label} &middot; {subtitle}
+      </p>
     </div>
   );
 }
@@ -224,12 +341,14 @@ function InsightCard({
   title,
   description,
   action,
+  href,
 }: {
   icon: string;
   iconColor: string;
   title: string;
   description: string;
   action: string;
+  href?: string;
 }) {
   return (
     <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5">
@@ -239,12 +358,19 @@ function InsightCard({
         </span>
         <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
       </div>
-      <p className="text-sm text-slate-500 leading-relaxed mb-3">
-        {description}
-      </p>
-      <button className="text-xs text-emerald-500 font-medium hover:text-emerald-600 transition-colors">
-        {action} &rarr;
-      </button>
+      <p className="text-sm text-slate-500 leading-relaxed mb-3">{description}</p>
+      {href ? (
+        <a
+          href={href}
+          className="text-xs text-emerald-500 font-medium hover:text-emerald-600 transition-colors"
+        >
+          {action} &rarr;
+        </a>
+      ) : (
+        <button className="text-xs text-emerald-500 font-medium hover:text-emerald-600 transition-colors">
+          {action} &rarr;
+        </button>
+      )}
     </div>
   );
 }
